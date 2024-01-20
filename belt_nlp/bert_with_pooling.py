@@ -35,6 +35,7 @@ class BertClassifierWithPooling(BertClassifier):
         chunk_size: int,
         stride: int,
         minimal_chunk_length: int,
+        num_labels: int = 1,
         pooling_strategy: str = "mean",
         maximal_text_length: Optional[int] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
@@ -47,6 +48,7 @@ class BertClassifierWithPooling(BertClassifier):
             batch_size,
             learning_rate,
             epochs,
+            num_labels,
             tokenizer,
             neural_network,
             pretrained_model_name_or_path,
@@ -62,6 +64,7 @@ class BertClassifierWithPooling(BertClassifier):
         else:
             raise ValueError("Unknown pooling strategy!")
         self.maximal_text_length = maximal_text_length
+        self.num_labels = num_labels
 
         additional_params = {
             "chunk_size": self.chunk_size,
@@ -69,6 +72,7 @@ class BertClassifierWithPooling(BertClassifier):
             "minimal_chunk_length": self.minimal_chunk_length,
             "pooling_strategy": self.pooling_strategy,
             "maximal_text_length": self.maximal_text_length,
+            "num_labels": self.num_labels,
         }
         self._params.update(additional_params)
 
@@ -125,13 +129,13 @@ class BertClassifierWithPooling(BertClassifier):
 
         # split result preds into chunks
 
-        preds_split = preds.split(number_of_chunks)
+        preds_split = preds.view(int(preds.shape[0]/self.num_labels), self.num_labels).split(number_of_chunks)
 
         # pooling
         if self.pooling_strategy == "mean":
-            pooled_preds = torch.cat([torch.mean(x).reshape(1) for x in preds_split])
+            pooled_preds = torch.stack([torch.mean(x, 0) for x in preds_split], 0)
         elif self.pooling_strategy == "max":
-            pooled_preds = torch.cat([torch.max(x).reshape(1) for x in preds_split])
+            pooled_preds = torch.stack([torch.max(x, 0) for x in preds_split], 0)
         else:
             raise ValueError("Unknown pooling strategy!")
 

@@ -33,6 +33,7 @@ class BertClassifier(ABC):
         batch_size: int,
         learning_rate: float,
         epochs: int,
+        num_labels: int,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         neural_network: Optional[Module] = None,
         pretrained_model_name_or_path: Optional[str] = "bert-base-uncased",
@@ -43,11 +44,12 @@ class BertClassifier(ABC):
             tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
         if not neural_network:
             bert = AutoModel.from_pretrained(pretrained_model_name_or_path)
-            neural_network = BertClassifierNN(bert)
+            neural_network = BertClassifierNN(bert, num_labels)
 
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.epochs = epochs
+        self.num_labels = num_labels
         self._params = {"batch_size": self.batch_size, "learning_rate": self.learning_rate, "epochs": self.epochs}
 
         self.device = device
@@ -156,12 +158,12 @@ class BertClassifier(ABC):
 
 
 class BertClassifierNN(Module):
-    def __init__(self, model: Union[BertModel, RobertaModel]):
+    def __init__(self, model: Union[BertModel, RobertaModel], num_labels:int):
         super().__init__()
         self.model = model
 
         # classification head
-        self.linear = Linear(768, 1)
+        self.linear = Linear(768, num_labels)
         self.sigmoid = Sigmoid()
 
     def forward(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
@@ -186,6 +188,6 @@ class TokenizedDataset(Dataset):
         return len(self.input_ids)
 
     def __getitem__(self, idx: int) -> Union[tuple[Tensor, Tensor, Any], tuple[Tensor, Tensor]]:
-        if self.labels:
+        if self.labels.any():
             return self.input_ids[idx], self.attention_mask[idx], self.labels[idx]
         return self.input_ids[idx], self.attention_mask[idx]

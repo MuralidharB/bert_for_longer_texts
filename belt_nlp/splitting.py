@@ -12,7 +12,7 @@ from belt_nlp.exceptions import InconsistentSplittingParamsException
 
 
 def transform_list_of_texts(
-    texts: list[str],
+    texts: List[str],
     tokenizer: PreTrainedTokenizerBase,
     chunk_size: int,
     stride: int,
@@ -36,7 +36,7 @@ def transform_single_text(
     stride: int,
     minimal_chunk_length: int,
     maximal_text_length: Optional[int],
-) -> tuple[Tensor, Tensor]:
+) -> Tuple[Tensor, Tensor]:
     """Transforms (the entire) text to model input of BERT model."""
     if maximal_text_length:
         tokens = tokenize_text_with_truncation(text, tokenizer, maximal_text_length)
@@ -51,7 +51,8 @@ def transform_single_text(
 
 def tokenize_whole_text(text: str, tokenizer: PreTrainedTokenizerBase) -> BatchEncoding:
     """Tokenizes the entire text without truncation and without special tokens."""
-    tokens = tokenizer(text, add_special_tokens=False, truncation=False, return_tensors="pt")
+    tokens = text
+    #tokens = tokenizer(text, add_special_tokens=False, truncation=False, return_tensors="pt")
     return tokens
 
 
@@ -70,14 +71,14 @@ def split_tokens_into_smaller_chunks(
     chunk_size: int,
     stride: int,
     minimal_chunk_length: int,
-) -> tuple[list[Tensor], list[Tensor]]:
+) -> Tuple[List[Tensor], List[Tensor]]:
     """Splits tokens into overlapping chunks with given size and stride."""
-    input_id_chunks = split_overlapping(tokens["input_ids"][0], chunk_size, stride, minimal_chunk_length)
-    mask_chunks = split_overlapping(tokens["attention_mask"][0], chunk_size, stride, minimal_chunk_length)
+    input_id_chunks = split_overlapping(tokens["input_ids"], chunk_size, stride, minimal_chunk_length)
+    mask_chunks = split_overlapping(tokens["attention_mask"], chunk_size, stride, minimal_chunk_length)
     return input_id_chunks, mask_chunks
 
 
-def add_special_tokens_at_beginning_and_end(input_id_chunks: list[Tensor], mask_chunks: list[Tensor]) -> None:
+def add_special_tokens_at_beginning_and_end(input_id_chunks: List[Tensor], mask_chunks: List[Tensor]) -> None:
     """
     Adds special CLS token (token id = 101) at the beginning.
     Adds SEP token (token id = 102) at the end of each chunk.
@@ -90,7 +91,7 @@ def add_special_tokens_at_beginning_and_end(input_id_chunks: list[Tensor], mask_
         mask_chunks[i] = torch.cat([Tensor([1]), mask_chunks[i], Tensor([1])])
 
 
-def add_padding_tokens(input_id_chunks: list[Tensor], mask_chunks: list[Tensor]) -> None:
+def add_padding_tokens(input_id_chunks: List[Tensor], mask_chunks: List[Tensor]) -> None:
     """Adds padding tokens (token id = 0) at the end to make sure that all chunks have exactly 512 tokens."""
     for i in range(len(input_id_chunks)):
         # get required padding length
@@ -102,7 +103,7 @@ def add_padding_tokens(input_id_chunks: list[Tensor], mask_chunks: list[Tensor])
             mask_chunks[i] = torch.cat([mask_chunks[i], Tensor([0] * pad_len)])
 
 
-def stack_tokens_from_all_chunks(input_id_chunks: list[Tensor], mask_chunks: list[Tensor]) -> tuple[Tensor, Tensor]:
+def stack_tokens_from_all_chunks(input_id_chunks: List[Tensor], mask_chunks: List[Tensor]) -> Tuple[Tensor, Tensor]:
     """Reshapes data to a form compatible with BERT model input."""
     input_ids = torch.stack(input_id_chunks)
     attention_mask = torch.stack(mask_chunks)
@@ -110,7 +111,7 @@ def stack_tokens_from_all_chunks(input_id_chunks: list[Tensor], mask_chunks: lis
     return input_ids.long(), attention_mask.int()
 
 
-def split_overlapping(tensor: Tensor, chunk_size: int, stride: int, minimal_chunk_length: int) -> list[Tensor]:
+def split_overlapping(tensor: Tensor, chunk_size: int, stride: int, minimal_chunk_length: int) -> List[Tensor]:
     """Helper function for dividing 1-dimensional tensors into overlapping chunks."""
     check_split_parameters_consistency(chunk_size, stride, minimal_chunk_length)
     result = [tensor[i : i + chunk_size] for i in range(0, len(tensor), stride)]
