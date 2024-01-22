@@ -188,6 +188,6 @@ class TokenizedDataset(Dataset):
         return len(self.input_ids)
 
     def __getitem__(self, idx: int) -> Union[tuple[Tensor, Tensor, Any], tuple[Tensor, Tensor]]:
-        if self.labels.any():
+        if self.labels is not None and self.labels.any():
             return self.input_ids[idx], self.attention_mask[idx], self.labels[idx]
         return self.input_ids[idx], self.attention_mask[idx]
