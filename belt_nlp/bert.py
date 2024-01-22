@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 import torch
+from torch.cuda.amp import autocast, GradScaler
 from torch import Tensor
 from torch.nn import BCELoss, DataParallel, Module, Linear, Sigmoid
 from torch.optim import AdamW, Optimizer
@@ -115,15 +116,18 @@ class BertClassifier(ABC):
     def _train_single_epoch(self, dataloader: DataLoader, optimizer: Optimizer) -> None:
         self.neural_network.train()
         cross_entropy = BCELoss()
+        scaler = GradScaler()
 
         for step, batch in enumerate(dataloader):
-            optimizer.zero_grad()
-            labels = batch[-1].float().cpu()
-            predictions = self._evaluate_single_batch(batch)
+            with autocast():
+                optimizer.zero_grad()
+                labels = batch[-1].float().cpu()
+                predictions = self._evaluate_single_batch(batch)
 
-            loss = cross_entropy(predictions, labels)
-            loss.backward()
-            optimizer.step()
+                loss = cross_entropy(predictions, labels)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
     @abstractmethod
     def _evaluate_single_batch(self, batch: tuple[Tensor]) -> Tensor:
