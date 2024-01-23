@@ -79,14 +79,14 @@ class BertClassifier(ABC):
         if not batch_size:
             batch_size = self.batch_size
         scores = self.predict_scores(x, batch_size)
-        classes = [i >= 0.5 for i in scores]
+        classes = torch.argmax(torch.tensor(scores), dim=1)
         return list(zip(classes, scores))
 
     def predict_classes(self, x: list[str], batch_size: Optional[int] = None) -> list[bool]:
         if not batch_size:
             batch_size = self.batch_size
         scores = self.predict_scores(x, batch_size)
-        classes = [i >= 0.5 for i in scores]
+        classes = torch.argmax(torch.tensor(scores), dim=1)
         return classes
 
     def predict_scores(self, x: list[str], batch_size: Optional[int] = None) -> list[float]:
