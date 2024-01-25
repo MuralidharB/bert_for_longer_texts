@@ -141,11 +141,13 @@ class BertClassifier(ABC):
             torch.save(self.neural_network, model_dir / "model.bin")
 
     @classmethod
-    def load(cls, model_dir: str, device: str = "cuda:0", many_gpus: bool = False) -> BertClassifier:
+    def load(cls, model_dir: str, tokenizer: Optional[PreTrainedTokenizerBase] = None,
+             device: str = "cuda:0", many_gpus: bool = False) -> BertClassifier:
         model_dir = Path(model_dir)
         with open(file=model_dir / "params.json", mode="r", encoding="utf-8") as file:
             params = json.load(file)
-        tokenizer = AutoTokenizer.from_pretrained(model_dir)
+        if not tokenizer:
+            tokenizer = AutoTokenizer.from_pretrained(model_dir)
         neural_network = torch.load(f=model_dir / "model.bin", map_location=device)
         return cls(
             **params,
