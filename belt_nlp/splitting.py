@@ -52,8 +52,10 @@ def transform_single_text(
 
 def tokenize_whole_text(text: str, tokenizer: PreTrainedTokenizerBase) -> BatchEncoding:
     """Tokenizes the entire text without truncation and without special tokens."""
+
+    #tokens = tokenizer("Tokenizes the entire text without truncation and without special tokens",
+    #                   add_special_tokens=False, truncation=False, return_tensors="pt")
     tokens = text
-    #tokens = tokenizer(text, add_special_tokens=False, truncation=False, return_tensors="pt")
     return tokens
 
 
@@ -74,8 +76,8 @@ def split_tokens_into_smaller_chunks(
     minimal_chunk_length: int,
 ) -> Tuple[List[Tensor], List[Tensor]]:
     """Splits tokens into overlapping chunks with given size and stride."""
-    input_id_chunks = split_overlapping(tokens["input_ids"], chunk_size, stride, minimal_chunk_length)
-    mask_chunks = split_overlapping(tokens["attention_mask"], chunk_size, stride, minimal_chunk_length)
+    input_id_chunks = split_overlapping(tokens["input_ids"][0], chunk_size, stride, minimal_chunk_length)
+    mask_chunks = split_overlapping(tokens["attention_mask"][0], chunk_size, stride, minimal_chunk_length)
     return input_id_chunks, mask_chunks
 
 
