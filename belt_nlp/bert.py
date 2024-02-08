@@ -6,10 +6,11 @@ from typing import Any, Optional, Union
 
 import torch
 from torch import Tensor
-from torch.nn import BCELoss, DataParallel, Module, Linear, Sigmoid
+from torch.nn import BCELoss, DataParallel, Module, Linear, Softmax
 from torch.optim import AdamW, Optimizer
 from torch.utils.data import Dataset, RandomSampler, SequentialSampler, DataLoader
-from transformers import AutoModel, AutoTokenizer, BatchEncoding, BertModel, PreTrainedTokenizerBase, RobertaModel
+from transformers import AutoModel, AutoTokenizer, BatchEncoding, BertModel
+from transformers import PreTrainedTokenizerBase, RobertaModel, BertConfig
 
 
 class BertClassifier(ABC):
@@ -37,14 +38,21 @@ class BertClassifier(ABC):
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         neural_network: Optional[Module] = None,
         pretrained_model_name_or_path: Optional[str] = "bert-base-uncased",
+        untrained: Optional[bool] = True,
         device: str = "cuda:0",
         many_gpus: bool = False,
     ):
         if not tokenizer:
             tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
         if not neural_network:
-            bert = AutoModel.from_pretrained(pretrained_model_name_or_path)
-            neural_network = BertClassifierNN(bert, num_labels)
+            if untrained:
+                config = BertConfig()
+                config.vocal_size = 8192
+                bert = BertModel(config)
+                neural_network = BertClassifierNN(bert, num_labels)
+            else:
+                bert = AutoModel.from_pretrained(pretrained_model_name_or_path)
+                neural_network = BertClassifierNN(bert, num_labels)
 
         self.batch_size = batch_size
         self.learning_rate = learning_rate
@@ -166,7 +174,7 @@ class BertClassifierNN(Module):
 
         # classification head
         self.linear = Linear(768, num_labels)
-        self.sigmoid = Sigmoid()
+        self.softmax = Softmax()
 
     def forward(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
         x = self.model(input_ids, attention_mask)
@@ -174,7 +182,7 @@ class BertClassifierNN(Module):
 
         # classification head
         x = self.linear(x)
-        x = self.sigmoid(x)
+        x = self.softmax(x)
         return x
 
 

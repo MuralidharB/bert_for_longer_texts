@@ -41,6 +41,7 @@ class BertClassifierWithPooling(BertClassifier):
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         neural_network: Optional[Module] = None,
         pretrained_model_name_or_path: Optional[str] = "bert-base-uncased",
+        untrained: Optional[bool] = True,
         device: str = "cuda:0",
         many_gpus: bool = False,
     ):
@@ -52,6 +53,7 @@ class BertClassifierWithPooling(BertClassifier):
             tokenizer,
             neural_network,
             pretrained_model_name_or_path,
+            untrained,
             device,
             many_gpus,
         )
