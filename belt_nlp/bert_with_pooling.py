@@ -35,6 +35,7 @@ class BertClassifierWithPooling(BertClassifier):
         chunk_size: int,
         stride: int,
         minimal_chunk_length: int,
+        num_labels: int = 1,
         pooling_strategy: str = "mean",
         maximal_text_length: Optional[int] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
@@ -47,6 +48,7 @@ class BertClassifierWithPooling(BertClassifier):
             batch_size,
             learning_rate,
             epochs,
+            num_labels,
             tokenizer,
             neural_network,
             pretrained_model_name_or_path,
@@ -62,6 +64,7 @@ class BertClassifierWithPooling(BertClassifier):
         else:
             raise ValueError("Unknown pooling strategy!")
         self.maximal_text_length = maximal_text_length
+        self.num_labels = num_labels
 
         additional_params = {
             "chunk_size": self.chunk_size,
@@ -69,6 +72,7 @@ class BertClassifierWithPooling(BertClassifier):
             "minimal_chunk_length": self.minimal_chunk_length,
             "pooling_strategy": self.pooling_strategy,
             "maximal_text_length": self.maximal_text_length,
+            "num_labels": self.num_labels,
         }
         self._params.update(additional_params)
 
@@ -101,7 +105,6 @@ class BertClassifierWithPooling(BertClassifier):
         number_of_chunks = [len(x) for x in input_ids]
 
         # concatenate all input_ids into one batch
-
         input_ids_combined = []
         for x in input_ids:
             input_ids_combined.extend(x.tolist())
@@ -109,7 +112,6 @@ class BertClassifierWithPooling(BertClassifier):
         input_ids_combined_tensors = torch.stack([torch.tensor(x).to(self.device) for x in input_ids_combined])
 
         # concatenate all attention masks into one batch
-
         attention_mask_combined = []
         for x in attention_mask:
             attention_mask_combined.extend(x.tolist())
@@ -121,7 +123,7 @@ class BertClassifierWithPooling(BertClassifier):
         # get model predictions for the combined batch
         preds = self.neural_network(input_ids_combined_tensors, attention_mask_combined_tensors)
 
-        preds = preds.flatten().cpu()
+        preds = preds.cpu()
 
         # split result preds into chunks
 
@@ -129,9 +131,9 @@ class BertClassifierWithPooling(BertClassifier):
 
         # pooling
         if self.pooling_strategy == "mean":
-            pooled_preds = torch.cat([torch.mean(x).reshape(1) for x in preds_split])
+            pooled_preds = torch.cat([torch.mean(x, dim=0) for x in preds_split])
         elif self.pooling_strategy == "max":
-            pooled_preds = torch.cat([torch.max(x).reshape(1) for x in preds_split])
+            pooled_preds = torch.cat([torch.max(x, dim=0) for x in preds_split])
         else:
             raise ValueError("Unknown pooling strategy!")
 
@@ -144,6 +146,6 @@ class BertClassifierWithPooling(BertClassifier):
         if len(data[0]) == 2:
             collated = [input_ids, attention_mask]
         else:
-            labels = Tensor([data[i][2] for i in range(len(data))])
+            labels = [data[i][2] for i in range(len(data))]
             collated = [input_ids, attention_mask, labels]
         return collated

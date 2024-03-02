@@ -51,7 +51,8 @@ def transform_single_text(
 
 def tokenize_whole_text(text: str, tokenizer: PreTrainedTokenizerBase) -> BatchEncoding:
     """Tokenizes the entire text without truncation and without special tokens."""
-    tokens = tokenizer(text, add_special_tokens=False, truncation=False, return_tensors="pt")
+    #tokens = tokenizer(text, add_special_tokens=False, truncation=False, return_tensors="pt")
+    tokens = text
     return tokens
 
 
